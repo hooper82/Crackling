@@ -4,7 +4,8 @@ import os
 import logging
 import tempfile
 import re
-from Helpers import * 
+import json
+from Helpers import *
 
 
 logging.basicConfig(
@@ -17,12 +18,13 @@ logging.basicConfig(
 if __name__ == '__main__':
     # load in config
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file', required=True)
+    parser.add_argument('--input_file', required=True)
+    parser.add_argument('--output_file', required=True)
     args = parser.parse_args()
 
     # Confirm the file exits
-    assert os.path.isfile(args.file)
-    target_file = args.file
+    assert os.path.isfile(args.input_file)
+    target_file = args.input_file
 
     # Sets to keep track of Guides and sequences seen before
     candidateGuides = set()
@@ -109,12 +111,30 @@ if __name__ == '__main__':
                 # Record duplicate guide
                 duplicateGuides.add(guide[0])
 
-    logging.info(f'Identified {len(candidateGuides)} possible target sites.')
-    logging.info(f'\t{len(duplicateGuides)} of {len(candidateGuides)} were seen more than once.')
-
-
-
     end_time = datetime.now()
     run_seconds = (end_time - start_time).total_seconds()
-    logging.info(f'Total Time Taken : {run_seconds:.2f} seconds')
 
+    candidateGuide_count = len(candidateGuides)
+    duplicateGuides_count = len(duplicateGuides)
+    duplicateGuides_pct = (duplicateGuides_count / candidateGuide_count) * 100
+    recordedSequences_count = len(recordedSequences)
+
+    logging.info(f'Total Time Taken : {run_seconds:.2f} seconds')
+    logging.info(f'Results:')
+    logging.info(f'Candidate Guides   : {candidateGuide_count:,}')
+    logging.info(f'Duplicate Guides   : {duplicateGuides_count:,} ({duplicateGuides_pct:.2f} %)')
+    logging.info(f'Recorded Sequences : {recordedSequences_count:,}')
+
+    results = {
+        'candidate_guides'   : sorted(list(candidateGuides)),
+        'duplicate_guides'   : sorted(list(duplicateGuides)),
+        'recorded_sequences' : sorted(list(recordedSequences)),
+    }
+
+
+    with open(args.output_file, 'w') as file:
+        json.dump(results, file)
+
+    output_file_size = os.path.getsize(args.output_file)
+    
+    logging.info(f'\nOutput written to {args.output_file} ({output_file_size:,} bytes)')
