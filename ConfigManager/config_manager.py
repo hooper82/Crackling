@@ -4,7 +4,13 @@ import glob
 
 
 class ConfigManager():
-    def __init__(self, filePath, messenger):
+    def __init__(self, filePath, messenger, onsiteOnly):
+        # Type Checking
+        assert isinstance(onsiteOnly, bool)
+
+        # Should we skip the offsite test phase?
+        self._onsiteOnly = onsiteOnly
+
         # The configuration
         self._configFilePath = filePath
 
@@ -31,6 +37,10 @@ class ConfigManager():
         # now that we have initially set things up, we should override __setattr__
         #self.__setattr__ = self._setattr_
     
+    @property
+    def onsiteOnly(self):
+        return self._onsiteOnly
+
     def __getitem__(self, arg):
         return self._ConfigParser.__getitem__(arg)
 

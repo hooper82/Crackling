@@ -703,84 +703,85 @@ def Crackling(configMngr):
             #########################################
             ##      Begin off-target scoring       ##
             #########################################   
-            printer('Beginning off-target scoring.')
+            if not configMngr.onsiteOnly:
+                printer('Beginning off-target scoring.')
 
-            testedCount = 0
-            
-            pgLength = int(configMngr['offtargetscore']['page-length'])
-
-            for pgIdx, pageCandidateGuides in Paginator(
-                filterCandidateGuides(candidateGuides, MODULE_SPECIFICITY), 
-                pgLength
-            ):
-
-                if pgLength > 0:
-                    printer(f'\tProcessing page {(pgIdx+1)} ({pgLength} per page).')
+                testedCount = 0
                 
-                # prepare the list of candidate guides to score
-                with open(configMngr['offtargetscore']['input'], 'w') as fTargetsToScore:
-                    for target23 in pageCandidateGuides:
-                        target = target23[0:20]
-                        fTargetsToScore.write(target+'\n')
-                        testedCount += 1
-                
-                # Convert line endings (Windows)
-                if os.name == 'nt':
-                    runner('dos2unix {}'.format(
-                            configMngr['offtargetscore']['input']
+                pgLength = int(configMngr['offtargetscore']['page-length'])
+
+                for pgIdx, pageCandidateGuides in Paginator(
+                    filterCandidateGuides(candidateGuides, MODULE_SPECIFICITY), 
+                    pgLength
+                ):
+
+                    if pgLength > 0:
+                        printer(f'\tProcessing page {(pgIdx+1)} ({pgLength} per page).')
+                    
+                    # prepare the list of candidate guides to score
+                    with open(configMngr['offtargetscore']['input'], 'w') as fTargetsToScore:
+                        for target23 in pageCandidateGuides:
+                            target = target23[0:20]
+                            fTargetsToScore.write(target+'\n')
+                            testedCount += 1
+                    
+                    # Convert line endings (Windows)
+                    if os.name == 'nt':
+                        runner('dos2unix {}'.format(
+                                configMngr['offtargetscore']['input']
+                            ),
+                            shell=True,
+                            check=True
+                        )
+                    
+                    # call the scoring method
+                    runner('{} {} {} {} {} {} > {}'.format(
+                            configMngr['offtargetscore']['binary'],
+                            configMngr['input']['offtarget-sites'],
+                            configMngr['offtargetscore']['input'],
+                            str(configMngr['offtargetscore']['max-distance']),
+                            str(configMngr['offtargetscore']['score-threshold']),
+                            str(configMngr['offtargetscore']['method']),
+                            configMngr['offtargetscore']['output'],
                         ),
                         shell=True,
                         check=True
                     )
-                
-                # call the scoring method
-                runner('{} {} {} {} {} {} > {}'.format(
-                        configMngr['offtargetscore']['binary'],
-                        configMngr['input']['offtarget-sites'],
-                        configMngr['offtargetscore']['input'],
-                        str(configMngr['offtargetscore']['max-distance']),
-                        str(configMngr['offtargetscore']['score-threshold']),
-                        str(configMngr['offtargetscore']['method']),
-                        configMngr['offtargetscore']['output'],
-                    ),
-                    shell=True,
-                    check=True
-                )
-                
-                targetsScored = {}
-                with open(configMngr['offtargetscore']['output'], 'r') as fTargetsScored:
-                    for targetScored in [x.split('\t') for x in fTargetsScored.readlines()]:
-                        if len(targetScored) == 2:
-                            targetsScored[targetScored[0]] = float(targetScored[1].strip())
-                
-                failedCount = 0
-                for target23 in pageCandidateGuides:
-                    if target23[0:20] in targetsScored:
-                        score = targetsScored[target23[0:20]]
-                        candidateGuides[target23]['offtargetscore'] = score
-                        
-                        if score < float(configMngr['offtargetscore']['score-threshold']):
-                            candidateGuides[target23]['passedOffTargetScore'] = CODE_REJECTED
-                            failedCount += 1
-                        else:
-                            candidateGuides[target23]['passedOffTargetScore'] = CODE_ACCEPTED
-                
-                printer(f'\t{failedCount} of {testedCount} failed here.')
+                    
+                    targetsScored = {}
+                    with open(configMngr['offtargetscore']['output'], 'r') as fTargetsScored:
+                        for targetScored in [x.split('\t') for x in fTargetsScored.readlines()]:
+                            if len(targetScored) == 2:
+                                targetsScored[targetScored[0]] = float(targetScored[1].strip())
+                    
+                    failedCount = 0
+                    for target23 in pageCandidateGuides:
+                        if target23[0:20] in targetsScored:
+                            score = targetsScored[target23[0:20]]
+                            candidateGuides[target23]['offtargetscore'] = score
+                            
+                            if score < float(configMngr['offtargetscore']['score-threshold']):
+                                candidateGuides[target23]['passedOffTargetScore'] = CODE_REJECTED
+                                failedCount += 1
+                            else:
+                                candidateGuides[target23]['passedOffTargetScore'] = CODE_ACCEPTED
+                    
+                    printer(f'\t{failedCount} of {testedCount} failed here.')
 
-        #########################################
-        ##           Begin output              ##
-        #########################################   
-        printer('Writing results to file.')
+            #########################################
+            ##           Begin output              ##
+            #########################################   
+            printer('Writing results to file.')
 
-        # Write guides to file. Include scores etc.
-        with open(configMngr['output']['file'], 'a+') as fOpen:
-            csvWriter = csv.writer(fOpen, delimiter=configMngr['output']['delimiter'],
-                            quotechar='"',dialect='unix', quoting=csv.QUOTE_MINIMAL)
-            
-            for target23 in candidateGuides:
-                output = [candidateGuides[target23][x] for x in DEFAULT_GUIDE_PROPERTIES_ORDER]
+            # Write guides to file. Include scores etc.
+            with open(configMngr['output']['file'], 'a+') as fOpen:
+                csvWriter = csv.writer(fOpen, delimiter=configMngr['output']['delimiter'],
+                                quotechar='"',dialect='unix', quoting=csv.QUOTE_MINIMAL)
                 
-                csvWriter.writerow(output)
+                for target23 in candidateGuides:
+                    output = [candidateGuides[target23][x] for x in DEFAULT_GUIDE_PROPERTIES_ORDER]
+                    
+                    csvWriter.writerow(output)
 
         #########################################
         ##              Clean up               ##
@@ -825,10 +826,12 @@ def Crackling(configMngr):
 if __name__ == '__main__':
     # load in config
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', help='Configuration file', default=None, required=True)
+    parser.add_argument('--config', '-c', help="Configuration File", default="config.ini")
+    parser.add_argument('--onsite_only', dest='onsite_only', action='store_true')
+    parser.set_defaults(onsite_only=False)
     args = parser.parse_args()
 
-    configMngr = ConfigManager(args.c, lambda x : print(f'configMngr says: {x}'))
+    configMngr = ConfigManager(args.config, lambda x : print(f'configMngr says: {x}'), args.onsite_only)
 
     if not configMngr.isConfigured():
         print('Something went wrong with reading the configuration.')
