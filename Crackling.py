@@ -734,7 +734,7 @@ def Crackling(configMngr):
                     )
                 
                 # call the scoring method
-                runner('{} {} {} {} {} > {}'.format(
+                runner('{} {} {} {} {} {} > {}'.format(
                         configMngr['offtargetscore']['binary'],
                         configMngr['input']['offtarget-sites'],
                         configMngr['offtargetscore']['input'],
