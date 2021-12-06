@@ -1,7 +1,7 @@
 from time import localtime, strftime
-from shutil import copyfile
-import configparser, os, shutil, sys
+import configparser, os, shutil
 import glob
+
 
 class ConfigManager():
     def __init__(self, filePath, messenger):
@@ -247,7 +247,7 @@ class ConfigManager():
                 self.getConfigName())
             )
         )
-        
+
     def getErrLogMethod(self):
         from Logger import Logger
         return Logger(os.path.join(
@@ -260,6 +260,4 @@ class ConfigManager():
 
     
 if __name__ == '__main__':
-    print('Cracking: the configuration manager cannot be called independently.')
-    print('Exiting...')
-    exit()
+    raise Exception("Cracking: the configuration manager cannot be called independently.")
