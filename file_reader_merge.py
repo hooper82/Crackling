@@ -79,7 +79,7 @@ if __name__ == '__main__':
     # Sets to keep track of Guides and sequences seen before
     candidateGuides = set()
     duplicateGuides = set()
-    recordedSequences = set()
+    recordedSequences = list()
 
 
     start_time = datetime.datetime.now()
@@ -87,7 +87,8 @@ if __name__ == '__main__':
     logging.info(f'Identifying possible target sites in: {target_file}')
 
     for sequence_header, sequence in load_exon_sequence_file(target_file):
-        recordedSequences.add(sequence_header)
+        if sequence_header not in recordedSequences:
+            recordedSequences.append(sequence_header)
 
         for guide in process_sequence(sequence, sequence_header):
             if guide[0] not in candidateGuides:
@@ -110,7 +111,7 @@ if __name__ == '__main__':
     # in Line 251 in Crackling.py, shortly after processing the file).
     # 
     # To mirror the original implimentaiton (which we're testing against), we're re-introducing this off-by-one error.
-    recordedSequences = list(recordedSequences)
+    # recordedSequences = list(recordedSequences)
     recordedSequences.pop()            # Remove last sequence header
     recordedSequences.insert(0, "")    # Insert empty string into start of list.
     recordedSequences_count = len(recordedSequences)
