@@ -15,9 +15,6 @@ logging.basicConfig(
 )
 
 
-SequenceGuide = namedtuple("SequenceGuide", ['guide', 'sequence_header', 'start', 'end', 'strand'])
-
-
 COMPLIMENTS = str.maketrans('acgtrymkbdhvACGTRYMKBDHV', 'tgcayrkmvhdbTGCAYRKMVHDB')
 def reverse_complement(sequence):
     """
@@ -26,7 +23,7 @@ def reverse_complement(sequence):
     return sequence.translate(COMPLIMENTS)[::-1]
 
 
-def process_sequence(sequence_header, sequence):
+def process_sequence(sequence, sequence_header):
     # Patterns for guide matching
     pattern_forward = r'(?=([ATCG]{21}GG))'
     pattern_reverse = r'(?=(CC[ACGT]{21}))'
@@ -40,7 +37,7 @@ def process_sequence(sequence_header, sequence):
         p = re.compile(pattern)
         for m in p.finditer(sequence):
             target23 = seqModifier(sequence[m.start() : m.start() + 23])
-            yield SequenceGuide(target23, sequence_header,  m.start(),  m.start() + 23, strand)
+            yield [target23, sequence_header,  m.start(),  m.start() + 23, strand]
 
 
 if __name__ == '__main__':
@@ -80,15 +77,14 @@ if __name__ == '__main__':
 
     # Find candidates!
     for sequence_header, sequence in sequences.items():
-        for guide in process_sequence(sequence_header, sequence):
-
+        for guide in process_sequence(sequence, sequence_header):
             # Check if guide has been seen before
-            if guide.guide not in candidateGuides:
+            if guide[0] not in candidateGuides:
                 # Record guide
-                candidateGuides.add(guide.guide)
+                candidateGuides.add(guide[0])
             else:
                 # Record duplicate guide
-                duplicateGuides.add(guide.guide)
+                duplicateGuides.add(guide[0])
 
 
     end_time = datetime.datetime.now()
