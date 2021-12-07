@@ -39,6 +39,31 @@ def process_sequence(sequence, sequence_header):
             yield [target23, sequence_header,  m.start(),  m.start() + 23, strand]
 
 
+def load_exon_sequence_file(filename):
+    sequence_header = None
+    sequence = []
+
+    with open(filename, 'r') as file:
+        for line in file:
+            # Clean line
+            line = line.strip()
+
+            # Sequence Header
+            if (line[0] == '>'):
+                if (sequence_header is not None):
+                    yield sequence_header, ''.join(sequence)
+
+                sequence_header = line[1:]
+                sequence = []
+
+            # Regular line
+            else:
+                sequence.append(line)
+        
+        # Return last line
+        yield sequence_header, ''.join(sequence)
+
+
 if __name__ == '__main__':
     # load in config
     parser = argparse.ArgumentParser()
@@ -61,57 +86,10 @@ if __name__ == '__main__':
 
     logging.info(f'Identifying possible target sites in: {target_file}')
 
-    # Extract guides from sequence file
-    with open(args.input_file, 'r') as inFile:
-        seqHeader = ''
-        seq = []
-        # Flag to determine whether a new seqeunce is being processed 
-        newSeq = True
-        for line in inFile:
-            # Remove garbage from line
-            line = line.strip()
-            # Some lines (e.g., first line in file) can be just a line break, move to next line
-            if line=='':
-                continue
-            # Header line, start of a new sequence
-            elif line[0] == '>':
-                # Process previous sequence
-                if (seqHeader not in recordedSequences) and (len(seq)!=0): 
-                    # Record header (If there is one)
-                    if seqHeader != '':
-                        recordedSequences.add(seqHeader)
-                    # Concat seqence fragments
-                    fullSeq = ''.join(seq)
-                    # Process the full sequence
-                    for guide in process_sequence(fullSeq, seqHeader):
-                        # Check if guide has been seen before 
-                        if guide[0] not in candidateGuides:
-                            # Record guide
-                            candidateGuides.add(guide[0])
-                        else:
-                            # Record duplicate guide
-                            duplicateGuides.add(guide[0])
-                # Check if seqHeader has been seen before
-                if line[1:] in recordedSequences:
-                    # Old Header, update newSeq to reflect we are passing over an OLD sequence
-                    newSeq = False
-                    seqHeader = ''
-                else:
-                    # New Header, update newSeq to reflect we are passing over an NEW sequence
-                    newSeq = True
-                    seqHeader = line[1:]
-                seq = []
-            # Sequence line, section of sequence
-            else:
-                # Check to see if a new sequence is being recorded
-                if newSeq:
-                    seq.append(line)
+    for sequence_header, sequence in load_exon_sequence_file(target_file):
+        recordedSequences.add(sequence_header)
 
-        # Process the last sequence
-        # Concat seqence fragments
-        fullSeq = ''.join(seq)
-        for guide in process_sequence(fullSeq, seqHeader):
-            # Check if guide has been seen before
+        for guide in process_sequence(sequence, sequence_header):
             if guide[0] not in candidateGuides:
                 # Record guide
                 candidateGuides.add(guide[0])
@@ -119,13 +97,22 @@ if __name__ == '__main__':
                 # Record duplicate guide
                 duplicateGuides.add(guide[0])
 
-
     end_time = datetime.datetime.now()
     run_seconds = (end_time - start_time).total_seconds()
 
     candidateGuide_count = len(candidateGuides)
     duplicateGuides_count = len(duplicateGuides)
     duplicateGuides_pct = (duplicateGuides_count / candidateGuide_count) * 100
+
+    # In the original implimentation in Crackling, there is an off-by-one error in `recordedSequences` set.
+    # I belive it happened in the logic to try and read Exon Sequence files with corrupted Sequence Headers.
+    # It doesn't matter. `recordedSequences` isn't used for anything in Crackling (infact, its deleted
+    # in Line 251 in Crackling.py, shortly after processing the file).
+    # 
+    # To mirror the original implimentaiton (which we're testing against), we're re-introducing this off-by-one error.
+    recordedSequences = list(recordedSequences)
+    recordedSequences.pop()            # Remove last sequence header
+    recordedSequences.insert(0, "")    # Insert empty string into start of list.
     recordedSequences_count = len(recordedSequences)
 
     logging.info(f'Total Time Taken : {run_seconds:.2f} seconds')
