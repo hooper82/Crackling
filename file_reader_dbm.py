@@ -80,6 +80,7 @@ if __name__ == '__main__':
     # Sets to keep track of Guides and sequences seen before
     candidateGuides = set()
     duplicateGuides = set()
+    recordedSequences = list()
     sequences_db = dbm.open(args.dbm_cache, 'n')
 
 
@@ -88,14 +89,15 @@ if __name__ == '__main__':
     logging.info(f'Identifying possible target sites in: {target_file}')
 
     for sequence_header, sequence in load_exon_sequence_file(target_file):
+        recordedSequences.append(sequence_header)
         sequences_db[sequence_header] = sequence
 
     logging.info(f'Found {len(sequences_db.keys()):,} sequences from {target_file}')
 
     # Find candidates!
-    for sequence_header, sequence in sequences_db.items():
+    for sequence_header in sequences_db.keys():
+        sequence = sequences_db.get(sequence_header).decode('utf8')
         sequence_header = sequence_header.decode('utf8')
-        sequence = sequence.decode('utf8')
 
         for guide in process_sequence(sequence, sequence_header):
             # Check if guide has been seen before
