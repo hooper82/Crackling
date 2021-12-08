@@ -122,7 +122,6 @@ if __name__ == '__main__':
     # in Line 251 in Crackling.py, shortly after processing the file).
     # 
     # To mirror the original implimentaiton, we're re-introducing this off-by-one error.
-    recordedSequences = [k.decode('utf8') for k in sequences_db.keys()]
     recordedSequences.pop()            # Remove last sequence header
     recordedSequences.insert(0, "")    # Insert empty string into start of list.
     recordedSequences_count = len(recordedSequences)
